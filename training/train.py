@@ -14,11 +14,19 @@ from utils.augmentation import mixup_data
 # Import the metrics helper
 from utils.metrics import compute_metrics
 
-def train_model(config):
-    # Setup device, seeds, etc.
+def train_model(config, progress_callback=None):
+    """
+    Trains the model using the configuration provided.
+    Optionally calls progress_callback(current_epoch, metrics) at the end of each epoch.
+    
+    :param config: A dictionary with configuration parameters.
+    :param progress_callback: Optional callback function to report progress.
+    :return: A result message.
+    """
+    # Setup device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # Define transforms (could also be moved to a separate module)
+    # Define transforms
     from torchvision import transforms
     train_transform = transforms.Compose([
         transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
@@ -42,39 +50,53 @@ def train_model(config):
     train_dataset = Cub2011(root=config['data']['root'], train=True, transform=train_transform, download=True)
     val_dataset   = Cub2011(root=config['data']['root'], train=False, transform=val_transform, download=False)
     
-    train_loader = DataLoader(train_dataset, batch_size=config['training']['batch_size'], shuffle=True, 
-                              num_workers=config['data']['num_workers'], pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=config['training']['batch_size'], shuffle=False, 
-                            num_workers=config['data']['num_workers'], pin_memory=True)
+    train_loader = DataLoader(train_dataset,
+                              batch_size=config['training']['batch_size'],
+                              shuffle=True,
+                              num_workers=config['data']['num_workers'],
+                              pin_memory=True)
+    val_loader = DataLoader(val_dataset,
+                            batch_size=config['training']['batch_size'],
+                            shuffle=False,
+                            num_workers=config['data']['num_workers'],
+                            pin_memory=True)
     
     # Build model
-    model = build_efficientnet_model(num_classes=config['model']['num_classes'], dropout_prob=config['model']['dropout'])
+    model = build_efficientnet_model(num_classes=config['model']['num_classes'],
+                                     dropout_prob=config['model']['dropout'])
     model = model.to(device)
     
     # Training components
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
-    optimizer = optim.AdamW(model.parameters(), lr=config['training']['lr'], weight_decay=config['training']['weight_decay'])
+    optimizer = optim.AdamW(model.parameters(),
+                            lr=config['training']['lr'],
+                            weight_decay=config['training']['weight_decay'])
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
-        optimizer, max_lr=config['training']['max_lr'], steps_per_epoch=len(train_loader), epochs=config['training']['num_epochs']
+        optimizer,
+        max_lr=config['training']['max_lr'],
+        steps_per_epoch=len(train_loader),
+        epochs=config['training']['num_epochs']
     )
     scaler = torch.amp.GradScaler()
     writer = SummaryWriter(log_dir=config['training']['log_dir'])
     
     best_val_accuracy = 0.0
-    
     save_dir = config['training']['save_dir']
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     
-    # Training loop
-    for epoch in range(config['training']['num_epochs']):
-        print(f"\nEpoch {epoch+1}/{config['training']['num_epochs']}")
+    total_epochs = config['training']['num_epochs']
+    
+    # Training loop (using your real training code)
+    for epoch in range(total_epochs):
+        print(f"\nEpoch {epoch+1}/{total_epochs}")
         model.train()
         running_loss = 0.0
         train_bar = tqdm(train_loader, desc=f"Training Epoch {epoch+1}", leave=False)
         
         for inputs, labels in train_bar:
             inputs, labels = inputs.to(device), labels.to(device)
+            # Mixup augmentation
             inputs, targets_a, targets_b, lam = mixup_data(inputs, labels, alpha=0.4)
             
             optimizer.zero_grad()
@@ -119,7 +141,6 @@ def train_model(config):
         print(f"Validation Accuracy: {accuracy:.4f}")
         writer.add_scalar("Loss/Validation", epoch_val_loss, epoch)
         writer.add_scalar("Accuracy/Validation", accuracy, epoch)
-        
         print("Classification Report:")
         print(report)
         
@@ -127,6 +148,15 @@ def train_model(config):
             best_val_accuracy = accuracy
             torch.save(model.state_dict(), os.path.join(save_dir, 'best_model.pth'))
             print("Best model updated.")
+        
+        # Call the progress callback after each epoch (if provided)
+        if progress_callback is not None:
+            progress_callback(epoch + 1, {
+                'train_loss': epoch_loss,
+                'val_loss': epoch_val_loss,
+                'accuracy': accuracy,
+            })
     
     print("\nTraining complete!")
     writer.close()
+    return "Training completed successfully."

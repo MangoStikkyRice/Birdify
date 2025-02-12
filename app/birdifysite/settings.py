@@ -11,9 +11,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'app.birdifyapp',
 ]
 
 MIDDLEWARE = [
@@ -49,7 +51,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "birdifysite.urls"
+ROOT_URLCONF = "app.birdifysite.urls"
 
 TEMPLATES = [
     {
@@ -67,7 +69,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "birdifysite.wsgi.application"
+WSGI_APPLICATION = "app.birdifysite.wsgi.application"
 
 
 # Database
@@ -75,8 +77,12 @@ WSGI_APPLICATION = "birdifysite.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "birdify_db",
+        'USER': 'blujay',
+        'PASSWORD': 'yRX7H9JB',
+        'HOST': 'localhost',  # or your host
+        'PORT': '5432',
     }
 }
 
@@ -115,9 +121,16 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'

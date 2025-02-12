@@ -1,0 +1,126 @@
+/* Reset and box-sizing */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Base styles */
+  body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+    padding: 20px;
+  }
+  
+  /* Header and Footer */
+  header,
+  footer {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+  }
+  
+  /* Main layout */
+  main {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  /* Card styling for sections */
+  .card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Section headings */
+  h2 {
+    margin-bottom: 15px;
+    font-size: 1.8rem;
+    color: #2c3e50;
+  }
+  
+  /* Form styling */
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  /* Button styling */
+  button {
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+  }
+  
+  button:hover {
+    background-color: #2980b9;
+  }
+  
+  /* Responsive table container */
+  .table-responsive {
+    overflow-x: auto;
+  }
+  
+  /* Table styling */
+  .metrics-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  
+  .metrics-table th,
+  .metrics-table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+  }
+  
+  .metrics-table th {
+    background-color: #3498db;
+    color: #fff;
+  }
+  
+  /* Message and Result boxes */
+  .message,
+  .result {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+  }
+  
+  .message {
+    background-color: #e74c3c;
+    color: #fff;
+  }
+  
+  .result {
+    background-color: #2ecc71;
+    color: #fff;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    header h1 {
+      font-size: 2rem;
+    }
+  
+    h2 {
+      font-size: 1.5rem;
+    }
+  }
+  

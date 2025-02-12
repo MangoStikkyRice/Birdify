@@ -16,8 +16,15 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from app.birdifyapp import views
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path('admin/', admin.site.urls),
+    path('', include('app.birdifyapp.urls')),
+    path('classify-image/', views.classify_image_view, name='classify-image'),
+    # Add a URL for starting training via AJAX.
+    path('start-training/', views.start_training_view, name='start-training'),
+    # You’ll also need a URL to poll task status (see next step).
+    path('task-status/<str:task_id>/', views.task_status, name='task-status'),
 ]
