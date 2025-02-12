@@ -1,3 +1,7 @@
+import os
+
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # Stops oneDNN warnings
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Suppresses unnecessary TensorFlow logs
 import yaml
 from training.train import train_model
 from utils.seeds import set_seeds
