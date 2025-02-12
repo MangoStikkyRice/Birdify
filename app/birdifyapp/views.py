@@ -38,13 +38,21 @@ def start_training_view(request):
     
 def classify_image(image_path):
     from models.efficientnet_v2_m import build_efficientnet_model
+    import torch
+    from PIL import Image
+    from torchvision import transforms
+    import os
+    from django.conf import settings
+
+    # Build the model and load weights
     model = build_efficientnet_model(num_classes=200, dropout_prob=0.3)
     checkpoint_path = os.path.join(settings.BASE_DIR, 'checkpoints', 'best_model.pth')
     if not os.path.exists(checkpoint_path):
         return "No trained model found. Please run training first."
     model.load_state_dict(torch.load(checkpoint_path, map_location=torch.device('cpu')))
     model.eval()
-    from torchvision import transforms
+
+    # Define the validation transforms
     val_transform = transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.CenterCrop(224),
@@ -52,6 +60,7 @@ def classify_image(image_path):
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
     ])
+    
     try:
         img = Image.open(image_path).convert('RGB')
     except Exception as e:
@@ -61,25 +70,37 @@ def classify_image(image_path):
     with torch.no_grad():
         output = model(input_tensor)
         _, pred = torch.max(output, 1)
-    return f"Predicted class index: {pred.item()}"
+    
+    # Get the predicted index (0-indexed)
+    predicted_index = pred.item()
+    # Convert to 1-indexed to match the classes.txt numbering.
+    class_id = predicted_index + 1
 
-def index(request):
-    message = ""
-    result_message = None
-    form = ImageUploadForm(request.POST or None, request.FILES or None)
-    
-    if request.method == "POST":
-        if "upload_image" in request.POST:
-            # Your image upload & classification logic...
-            pass
-    
-    metrics_list = TrainingMetrics.objects.all().order_by("-date")
-    return render(request, "index.html", {
-        "form": form,
-        "message": message,
-        "result": result_message,
-        "metrics": metrics_list,
-    })
+    # Define the path to your classes.txt file.
+    classes_file = os.path.join("/content/data", "CUB_200_2011", "classes.txt")
+    if not os.path.exists(classes_file):
+        return f"Classes file not found at {classes_file}"
+
+    # Parse classes.txt into a dictionary mapping the class number (1-indexed) to label.
+    class_mapping = {}
+    with open(classes_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split()
+            try:
+                num = int(parts[0])
+            except ValueError:
+                continue
+            # Remove the numeric prefix and underscores
+            label = " ".join(parts[1:]).replace("_", " ").lstrip("0123456789. ")
+            class_mapping[num] = label
+
+    predicted_label = class_mapping.get(class_id, f"Unknown class (ID {class_id})")
+
+    # Return formatted output as "Index: Name"
+    return f"Predicted class: {predicted_label} [{class_id}]"
     
 # New view for classifying uploaded image
 @csrf_exempt  # Alternatively, use CSRF token via JavaScript
@@ -107,3 +128,18 @@ def classify_image_view(request):
         return JsonResponse({'result': result})
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=400)
+    
+def index(request):
+    """
+    Render the main page.
+    """
+    message = ""
+    result_message = ""
+    form = ImageUploadForm(request.POST or None, request.FILES or None)
+    metrics_list = TrainingMetrics.objects.all().order_by("-date")
+    return render(request, "index.html", {
+        "form": form,
+        "message": message,
+        "result": result_message,
+        "metrics": metrics_list,
+    })

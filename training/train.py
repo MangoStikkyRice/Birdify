@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 # Import the dataset, model builder, and augmentation helper
 from data.datasets import Cub2011
-from models.efficientnet_v2_m import build_efficientnet_model
+from models.efficientnet_v2_s import build_efficientnet_model
 from utils.augmentation import mixup_data
 
 # Import the metrics helper
