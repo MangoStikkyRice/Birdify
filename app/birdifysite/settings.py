@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-from pathlib import Path
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -81,7 +80,7 @@ DATABASES = {
         "NAME": "birdify_db",
         'USER': 'blujay',
         'PASSWORD': 'yRX7H9JB',
-        'HOST': 'localhost',  # or your host
+        'HOST': 'localhost',
         'PORT': '5432',
     }
 }

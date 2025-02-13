@@ -1,16 +1,27 @@
+
 data:
+
+  # Data settings.
   root: "/content/data"
+
+  # System settings.
   num_workers: 4
 
 model:
+
+  # Model-level hyperparameters.
   num_classes: 200
   dropout: 0.3
 
 training:
+
+  # Training-level hyperparameters.
   batch_size: 16
   lr: 0.003
   weight_decay: 0.0001
   max_lr: 0.0015
-  num_epochs: 1
+  num_epochs: 15
+
+  # Logging and checkpoint settings.
   log_dir: "./runs/CUB200_experiment"
   save_dir: "./checkpoints"
