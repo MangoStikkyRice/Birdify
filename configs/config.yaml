@@ -20,7 +20,7 @@ training:
   lr: 0.003
   weight_decay: 0.0001
   max_lr: 0.0015
-  num_epochs: 15
+  num_epochs: 10
 
   # Logging and checkpoint settings.
   log_dir: "./runs/CUB200_experiment"

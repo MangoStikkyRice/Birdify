@@ -21,9 +21,9 @@
     <!-- Training Section -->
     <section id="training-section" class="card">
       <h2>Run Training</h2>
-      <!-- Instead of a form, we have a button that will trigger an AJAX call -->
+      <!-- Instead of a form, we have a button that triggers an AJAX call -->
       <button id="start-training-btn">Start Training</button>
-      <!-- A container for the progress bar and text (initially hidden) -->
+      <!-- A container for the progress bar and text -->
       <div id="progress-container" style="display: none; margin-top: 10px;">
         <div id="progress-bar" style="width: 0%; background-color: green; height: 20px;"></div>
         <span id="progress-text"></span>
@@ -43,11 +43,10 @@
 
     <script>
       document.getElementById('upload-form').addEventListener('submit', function (event) {
-        event.preventDefault();  // Prevent page refresh
+        event.preventDefault();
         const form = event.target;
         const formData = new FormData(form);
 
-        // Optional: Include CSRF token in headers if you remove @csrf_exempt on the view.
         fetch('/classify-image/', {
           method: 'POST',
           body: formData,
@@ -123,7 +122,6 @@
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
           const cookie = cookies[i].trim();
-          // Does this cookie string begin with the name we want?
           if (cookie.substring(0, name.length + 1) === (name + '=')) {
             cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
             break;
@@ -173,9 +171,8 @@
           } else if (data.state === 'SUCCESS') {
             document.getElementById('progress-bar').style.width = '100%';
             document.getElementById('progress-text').innerText = "Training complete!";
-            return; // Stop polling once the task is complete.
+            return;
           }
-          // Poll again after 2 seconds
           setTimeout(function () {
             pollTaskStatus(taskId);
           }, 2000);

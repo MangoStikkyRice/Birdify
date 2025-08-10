@@ -5,7 +5,7 @@ import torch
 def visualize_predictions(model, dataset, device, n_samples=6):
     """Visualize predictions on a few validation images."""
     model.eval()
-    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    axes = plt.subplots(2, 3, figsize=(12, 8))
     axes = axes.flatten()
     indices = np.random.choice(len(dataset), n_samples, replace=False)
 

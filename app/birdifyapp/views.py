@@ -1,6 +1,5 @@
 import os
 import torch
-import yaml
 from PIL import Image
 from django.shortcuts import render
 from django.conf import settings
@@ -10,15 +9,14 @@ from app.birdifyapp.tasks import run_training_task
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import uuid
+from models.efficientnet_v2_s import build_efficientnet_model
+from torchvision import transforms
 
-# Import the training function (now a plain synchronous function)
-from app.birdifyapp.tasks import run_training_task
 
 from celery.result import AsyncResult
 
 def task_status(request, task_id):
     result = AsyncResult(task_id)
-    # result.info will contain your custom meta data if the task is in progress.
     return JsonResponse({
         'state': result.state,
         'info': result.info,
@@ -37,12 +35,6 @@ def start_training_view(request):
         return JsonResponse({'error': 'Invalid request method.'}, status=400)
     
 def classify_image(image_path):
-    from models.efficientnet_v2_m import build_efficientnet_model
-    import torch
-    from PIL import Image
-    from torchvision import transforms
-    import os
-    from django.conf import settings
 
     # Build the model and load weights
     model = build_efficientnet_model(num_classes=200, dropout_prob=0.3)
@@ -102,8 +94,7 @@ def classify_image(image_path):
     # Return formatted output as "Index: Name"
     return f"Predicted class: {predicted_label} [{class_id}]"
     
-# New view for classifying uploaded image
-@csrf_exempt  # Alternatively, use CSRF token via JavaScript
+@csrf_exempt 
 def classify_image_view(request):
     if request.method == 'POST':
         # Process the uploaded image file.
@@ -111,17 +102,15 @@ def classify_image_view(request):
             return JsonResponse({'error': 'No image uploaded.'}, status=400)
         
         uploaded_file = request.FILES['image']
-        # Option 1: Save the file temporarily to disk
+
         temp_filename = os.path.join(settings.BASE_DIR, 'media', f"{uuid.uuid4().hex}_{uploaded_file.name}")
         os.makedirs(os.path.dirname(temp_filename), exist_ok=True)
         with open(temp_filename, 'wb+') as destination:
             for chunk in uploaded_file.chunks():
                 destination.write(chunk)
         
-        # Get classification result.
         result = classify_image(temp_filename)
         
-        # Optionally, remove the temporary file.
         os.remove(temp_filename)
         
         # Return the result as JSON.

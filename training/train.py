@@ -10,6 +10,8 @@ Sources:
     [3] https://pytorch.org/docs/stable/generated/torch.optim.AdamW.html
     [4] https://stackoverflow.com/questions/72534859/is-gradscaler-necessary-with-mixed-precision-training-with-pytorch
     [5] https://pytorch.org/docs/stable/tensorboard.html
+    [6] https://stackoverflow.com/questions/51433378/what-does-model-train-do-in-pytorch
+    [7] https://tqdm.github.io/
 """
 import os
 import torch
@@ -25,15 +27,12 @@ from data.datasets import Cub2011
 from models.efficientnet_v2_s import build_efficientnet_model
 from utils.augmentation import mixup_data
 from utils.metrics import compute_metrics
+# from utils.visualization import visualize_predictions
 
 def train_model(config, progress_callback=None):
     """
     Trains the model using the configuration from ../configs/config.
     Optionally calls progress_callback(current_epoch, metrics) at the end of each epoch.
-    
-    :param config: YAML file with configuration parameters.
-    :param progress_callback: Optional callback function to report progress.
-    :return: The training result message.
     """
     
     # Checks if CUDA is available for tensors and models to run on the GPU.
@@ -114,6 +113,8 @@ def train_model(config, progress_callback=None):
     # Mixed Precision with GradScaler speeds up training using 16-point where possible.
     # This is actually quite crucial as the model may fail to converge without it.
     # [4] explains this succinctly.
+    # But anyway, GradScaler is a scaling utility that modifies gradients before
+    # backpropagation to prevent underflow.
     scaler = torch.amp.GradScaler()
     
     # Log training data to TensorBoard. These are all saved to ../runs.
@@ -128,23 +129,35 @@ def train_model(config, progress_callback=None):
     
     total_epochs = config['training']['num_epochs']
     
-    # Training loop
+    # Training loop: Iterate over the number of epochs specified in ../configs/config
     for epoch in range(total_epochs):
         print(f"\nEpoch {epoch+1}/{total_epochs}")
+        
+        # Set model to training mode using the train() method from Pytorch.
+        # This activates layers like dropout and batch normalization [6].
         model.train()
         running_loss = 0.0
+        
+        # Just a loading bar. More details from [7].
         train_bar = tqdm(train_loader, desc=f"Training Epoch {epoch+1}", leave=False)
         
+        # Iterate over each batch provided by train_loader.
         for inputs, labels in train_bar:
+            
             inputs, labels = inputs.to(device), labels.to(device)
-            # Mixup augmentation
+            
+            # Mixup augmentation from ../utils/augmentation/mixup_data.
             inputs, targets_a, targets_b, lam = mixup_data(inputs, labels, alpha=0.4)
             
             optimizer.zero_grad()
+            
+            # Enable AMP and pass the input batch to the model to make predictions.
             with torch.amp.autocast(device_type='cuda' if device.type=='cuda' else 'cpu'):
                 outputs = model(inputs)
+                
+                # This calculates loss, but we need to consider our mixup augmentation.
                 loss = lam * criterion(outputs, targets_a) + (1 - lam) * criterion(outputs, targets_b)
-            
+
             scaler.scale(loss).backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5.0)
             scaler.step(optimizer)
@@ -156,14 +169,19 @@ def train_model(config, progress_callback=None):
         
         epoch_loss = running_loss / len(train_dataset)
         print(f"Training Loss: {epoch_loss:.4f}")
+        
+        # This is for TensorBoard by the way.
         writer.add_scalar("Loss/Train", epoch_loss, epoch)
         
-        # Validation phase
+        # Switch the model to eval mode. It's the same as the training mode, except
+        # the dropout layers are disabled and the batch normalization layers use
+        # the running statistics instead of the batch's.
         model.eval()
         all_preds = []
         all_labels = []
         val_loss = 0.0
         
+        # You do not need gradients for evaluation. Saves some memory.
         with torch.no_grad():
             val_bar = tqdm(val_loader, desc=f"Validating Epoch {epoch+1}", leave=False)
             for inputs, labels in val_bar:
@@ -172,12 +190,16 @@ def train_model(config, progress_callback=None):
                     outputs = model(inputs)
                     loss = criterion(outputs, labels)
                 val_loss += loss.item() * inputs.size(0)
+                
+                # Take index of highest scoring class. That's the prediction.
                 _, preds = torch.max(outputs, 1)
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(labels.cpu().numpy())
         
         epoch_val_loss = val_loss / len(val_dataset)
-        accuracy, f1, precision, recall, report = compute_metrics(all_labels, all_preds)
+        
+        # Use the method from ../utils/metrics/compute_metrics
+        accuracy, _, _, _, report = compute_metrics(all_labels, all_preds)
         print(f"Validation Loss: {epoch_val_loss:.4f}")
         print(f"Validation Accuracy: {accuracy:.4f}")
         writer.add_scalar("Loss/Validation", epoch_val_loss, epoch)
@@ -190,7 +212,7 @@ def train_model(config, progress_callback=None):
             torch.save(model.state_dict(), os.path.join(save_dir, 'best_model.pth'))
             print("Best model updated.")
         
-        # Call the progress callback after each epoch (if provided)
+        # Call the progress callback after each epoch if provided and update it.
         if progress_callback is not None:
             progress_callback(epoch + 1, {
                 'train_loss': epoch_loss,
@@ -198,6 +220,16 @@ def train_model(config, progress_callback=None):
                 'accuracy': accuracy,
             })
     
+    # Just make sure to close this since it blocks the script.
+    # visualize_predictions(model, val_dataset, device, n_samples=6)
     print("\nTraining complete!")
     writer.close()
     return "Training completed successfully."
+
+if __name__ == "__main__":
+    # Only run the training loop if this file is executed directly.
+    import yaml
+    config_path = "path/to/config.yaml"
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+    train_model(config)

@@ -1,6 +1,5 @@
 from ultralytics import YOLO
 import cv2
-import os
 
 # Paths
 video_path = "videos/video1.mp4"  
